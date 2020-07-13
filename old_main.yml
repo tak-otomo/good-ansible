@@ -57,24 +57,53 @@
   gather_facts: false
   become: true
 
-  roles:
-    - {name: deploy-tomcat, tags: deploy-tomcat}
+  tasks:
+  - name: install tomcat
+    package:
+      name: tomcat
+      state: latest
+  - name: enable tomcat at boot
+    service:
+      name: tomcat
+      enabled: yes
 
-- name: copy index.html on apps 1
+  - name: create ansible tomcat directory
+    file:
+      path: /usr/share/tomcat/webapps/ROOT
+      state: directory
+
+  - name: copy static index.html to tomcat webapps/ansible/index.html
+    template:
+      src: index.html.j2
+      dest: /usr/share/tomcat/webapps/ROOT/index.html
+      mode: 0644
+
+  - name: start tomcat
+    service:
+      name: tomcat
+      state: started
+
+- name: index.html on app 1
   hosts: app1
   gather_facts: false
   become: true
-  
-  roles:
-    - {name: copy1-index.html, tags: copy2-index.html}
 
-- name: copy index.html on apps 2
+  tasks:
+  - name: copy static index.html to tomcat webapps/ansible/index.html
+    template:
+      src: index.html.app1
+      dest: /usr/share/tomcat/webapps/ansible/index.html
+
+- name: index.html on app 1
   hosts: app2
   gather_facts: false
   become: true
 
-  roles:
-    - {name: copy2-index.html, tags: copy2-index.html}
+  tasks:
+  - name: copy static index.html to tomcat webapps/ansible/index.html
+    template:
+      src: index.html.app2
+      dest: /usr/share/tomcat/webapps/ansible/index.html
 
 - name: deploy postgres
   hosts: apps
@@ -98,14 +127,14 @@
       msg: "Either uncomment the postgres setup or manually login and initialize"
 
  # only run the next 2 tasks once!
- # - name: initilize postgres
- #   command: postgresql-setup initdb
- # - name: initilize postgres some more
- #   command: chkconfig postgresql on
- # - name: start postgres
- #   service:
- #     name: postgresql
- #     state: restarted
+#  - name: initilize postgres
+#    command: postgresql-setup initdb
+#  - name: initilize postgres some more
+#    command: chkconfig postgresql on
+  - name: start postgres
+    service:
+      name: postgresql.service
+      state: started
 
 - name: deploy apache
   hosts: apps
@@ -121,7 +150,7 @@
     service:
       name: httpd
       enabled: yes
-  - name: start apache
-    service:
-      name: httpd
-      state: started
+#  - name: start apache
+#    service:
+#      name: httpd
+#      state: started
